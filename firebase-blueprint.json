@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "campaigns": {
+      "title": "Campaign",
+      "description": "Email campaign meta-data and content",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "sent", "scheduled"] },
+        "sentCount": { "type": "number" },
+        "openCount": { "type": "number" },
+        "clickCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["name", "subject", "content", "status", "ownerId"]
+    },
+    "contacts": {
+      "title": "Contact",
+      "description": "Subscriber information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "unsubscribed": { "type": "boolean" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["email", "ownerId"]
+    },
+    "smtpConfigs": {
+      "title": "SMTP Configuration",
+      "description": "Custom SMTP delivery server settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": "number" },
+        "user": { "type": "string" },
+        "pass": { "type": "string" },
+        "secure": { "type": "boolean" },
+        "ownerId": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["name", "host", "port", "user", "pass", "ownerId"]
+    }
+  },
+  "firestore": {
+    "campaigns": {
+      "schema": "campaigns",
+      "description": "User email campaigns"
+    },
+    "contacts": {
+      "schema": "contacts",
+      "description": "Subscriber lists"
+    },
+    "smtpConfigs": {
+      "schema": "smtpConfigs",
+      "description": "Delivery server configurations"
+    }
+  }
+}

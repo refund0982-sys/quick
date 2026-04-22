@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(data) { return isSignedIn() && data.ownerId == request.auth.uid; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // 1. Campaigns Collection
+    match /campaigns/{campaignId} {
+      allow get: if isOwner(existing());
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && isValidId(campaignId)
+        && incoming().ownerId == request.auth.uid
+        && isValidCampaign(incoming());
+        
+      allow update: if isOwner(existing())
+        && incoming().ownerId == existing().ownerId
+        && isValidCampaign(incoming())
+        && (
+          // Action: Sync Stats
+          (incoming().diff(existing()).affectedKeys().hasOnly(['sentCount', 'openCount', 'clickCount'])) ||
+          // Action: Edit Content
+          (existing().status == 'draft' && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'subject', 'content', 'status']))
+        );
+        
+      allow delete: if isOwner(existing()) && existing().status == 'draft';
+    }
+
+    function isValidCampaign(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.subject is string && data.subject.size() > 0 && data.subject.size() <= 200
+        && data.content is string && data.content.size() <= 100000
+        && data.status in ['draft', 'sent', 'scheduled']
+        && data.ownerId == request.auth.uid;
+    }
+
+    // 2. Contacts Collection
+    match /contacts/{contactId} {
+      allow read: if isOwner(existing());
+      allow create: if isSignedIn() 
+        && incoming().ownerId == request.auth.uid
+        && incoming().email is string
+        && incoming().email.matches('^.+@.+$');
+      allow update: if isOwner(existing())
+        && incoming().ownerId == existing().ownerId;
+      allow delete: if isOwner(existing());
+    }
+
+    // 3. SMTP Configurations
+    match /smtpConfigs/{configId} {
+      allow read: if isOwner(existing());
+      allow create: if isSignedIn() 
+        && incoming().ownerId == request.auth.uid
+        && incoming().host is string
+        && incoming().port is number;
+      allow update: if isOwner(existing())
+        && incoming().ownerId == existing().ownerId;
+      allow delete: if isOwner(existing());
+    }
+  }
+}
